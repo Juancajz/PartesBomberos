@@ -4,16 +4,27 @@ from django.contrib.auth.models import AbstractUser
 class Bombero(AbstractUser):
     # Opciones de Rango
     RANGOS = [
-        ('VOLUNTARIO', 'Voluntario'),
-        ('AYUDANTE', 'Ayudante'),
-        ('TENIENTE_3', 'Teniente Tercero'),
-        ('TENIENTE_2', 'Teniente Segundo'),
-        ('TENIENTE_1', 'Teniente Primero'),
-        ('CAPITAN', 'Capitán'),
-        ('TESORERO', 'Tesorero General'),
-        ('SECRETARIO', 'Secretario General'),
-        ('DIRECTOR', 'Director'),
+        # GENERAL #
+        ('SUPERINTENDENTE', 'SuperIntendente'),
+        ('VICESUPERINTENDENTE', 'ViceSuperIntendente'),
+        ('SECRETARIOGENERAL', 'Secretario General'),
+        ('TESOREROGENERAL', 'Tesorero General'),
         ('COMANDANTE', 'Comandante'),
+        ('SEGUNDOCOMANDANTE', 'Segundo Comandante'),
+        ### COMPAÑIA ###
+
+        # Administrativos #
+        ('DIRECTOR','Director'),
+        ('SECRETARIO','Secretario'),
+        ('TESORERO','Tesorero'),
+        # #
+        ('CAPITAN','Capitan'),
+        ('AYUDANTE','Ayudante'),
+        ('TENIENTEPRIMERO','Teniente Primero'),
+        ('TENIENTESEGUNDO','Teniente Segundo'),
+        ('TENIENTETERCERO','Teniente Tercero'),
+        ('VOLUNTARIO','Voluntario'),
+
     ]
 
     # Compañía

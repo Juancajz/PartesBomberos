@@ -4,31 +4,32 @@ from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Material
 from .serializers import MaterialSerializer
-# Importamos Carro para poder buscarlo
 from carros.models import Carro
-
+from usuarios.permissions import PermisoInventarioCRUD 
 class MaterialViewSet(viewsets.ModelViewSet):
     queryset = Material.objects.all().order_by('categoria', 'nombre')
     serializer_class = MaterialSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['carro', 'categoria', 'estado']
+    
+    permission_classes = [PermisoInventarioCRUD]
 
     # --- AQUÍ DEFINIMOS LAS LISTAS PREDEFINIDAS ---
     PAUTAS_ESTANDAR = {
-        'BOMBA': [
+        # En lugar de 'BOMBA', usamos el nombre real del carro
+        'B-1': [
             {'nombre': 'Manguera 70mm', 'categoria': 'AGUA', 'cantidad': 10, 'ubicacion': 'Cama Baja'},
-            {'nombre': 'Manguera 50mm', 'categoria': 'AGUA', 'cantidad': 8, 'ubicacion': 'Cajoneras'},
             {'nombre': 'Pitón Protek', 'categoria': 'AGUA', 'cantidad': 2, 'ubicacion': 'Cajonera 1'},
-            {'nombre': 'Hacha Bombero', 'categoria': 'HERRAMIENTAS', 'cantidad': 2, 'ubicacion': 'Cabina'},
-            {'nombre': 'Equipo ERA', 'categoria': 'EPP', 'cantidad': 4, 'ubicacion': 'Cabina'},
-            {'nombre': 'Radio Portátil', 'categoria': 'COMUNICACION', 'cantidad': 4, 'ubicacion': 'Cabina'},
+            # ... más cosas exclusivas del B-1 ...
         ],
-        'RESCATE': [
-            {'nombre': 'Equipo Hidráulico (Holmatro)', 'categoria': 'RESCATE', 'cantidad': 1, 'ubicacion': 'Cajonera 1'},
-            {'nombre': 'Tabla Espinal', 'categoria': 'TRAUMA', 'cantidad': 2, 'ubicacion': 'Techo'},
-            {'nombre': 'Collar Cervical', 'categoria': 'TRAUMA', 'cantidad': 5, 'ubicacion': 'Bolso Médico'},
-            {'nombre': 'Halligan', 'categoria': 'HERRAMIENTAS', 'cantidad': 1, 'ubicacion': 'Cajonera 2'},
-            {'nombre': 'Conos de Seguridad', 'categoria': 'HERRAMIENTAS', 'cantidad': 6, 'ubicacion': 'Techo'},
+        'B-2': [
+            {'nombre': 'Manguera 50mm', 'categoria': 'AGUA', 'cantidad': 15, 'ubicacion': 'Cajoneras'},
+            {'nombre': 'Hacha', 'categoria': 'HERRAMIENTAS', 'cantidad': 1, 'ubicacion': 'Cabina'},
+            # ... cosas que solo lleva el B-2 ...
+        ],
+        'R-1': [
+            {'nombre': 'Holmatro', 'categoria': 'RESCATE', 'cantidad': 1, 'ubicacion': 'Cajonera 1'},
+            # ... inventario de rescate ...
         ],
         'FORESTAL': [
             {'nombre': 'McLeod', 'categoria': 'HERRAMIENTAS', 'cantidad': 4, 'ubicacion': 'Techo/Caja'},
@@ -51,7 +52,7 @@ class MaterialViewSet(viewsets.ModelViewSet):
         except Carro.DoesNotExist:
             return Response({'error': 'Carro no encontrado'}, status=status.HTTP_404_NOT_FOUND)
 
-        lista_items = self.PAUTAS_ESTANDAR.get(tipo_pauta)
+        lista_items = self.PAUTAS_ESTANDAR.get(carro.nombre)
         if not lista_items:
             return Response({'error': 'Tipo de pauta no válido'}, status=status.HTTP_400_BAD_REQUEST)
 
