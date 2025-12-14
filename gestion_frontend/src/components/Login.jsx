@@ -14,26 +14,18 @@ function Login({ onLogin }) {
     setCargando(true);
 
     try {
-      // 1. Obtener Token
       const resToken = await axios.post('http://127.0.0.1:8000/api/token/', {
         username: username,
         password: password
       });
       const token = resToken.data.access;
-      
-      // 2. Preguntar "¿Quién soy?"
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       const config = { headers: { Authorization: `Bearer ${token}` } };
       const resMe = await axios.get('http://127.0.0.1:8000/api/bomberos/me/', config);
-      
       const esAdmin = resMe.data.is_staff;
-      const nombreCompleto = resMe.data.nombre_completo || resMe.data.username; // <--- OBTENEMOS EL NOMBRE
-
-      // Guardar datos en el navegador
+      const nombreCompleto = resMe.data.nombre_completo || resMe.data.username; 
       localStorage.setItem('token_bomberos', token);
-      
-      // 3. Avisar al padre (App.jsx) enviando también el nombre
       onLogin(token, esAdmin, nombreCompleto);
-
       Swal.fire({
         icon: 'success',
         title: `Bienvenido/a`,
@@ -44,7 +36,12 @@ function Login({ onLogin }) {
 
     } catch (error) {
       console.error(error);
-      Swal.fire({ icon: 'error', title: 'Error', text: 'Credenciales incorrectas' });
+      // Feedback visual del error
+      if (error.response && error.response.status === 401) {
+          Swal.fire({ icon: 'error', title: 'Error', text: 'Credenciales incorrectas' });
+      } else {
+          Swal.fire({ icon: 'error', title: 'Error', text: 'Ocurrió un error al intentar ingresar' });
+      }
     } finally {
       setCargando(false);
     }
@@ -65,12 +62,23 @@ function Login({ onLogin }) {
           <Form onSubmit={handleSubmit}>
             <Form.Group className="mb-3">
               <Form.Label>Usuario</Form.Label>
-              <Form.Control type="text" placeholder="Ingrese usuario" value={username} onChange={(e) => setUsername(e.target.value)} autoFocus />
+              <Form.Control 
+                type="text" 
+                placeholder="Ingrese usuario" 
+                value={username} 
+                onChange={(e) => setUsername(e.target.value)} 
+                autoFocus 
+              />
             </Form.Group>
 
             <Form.Group className="mb-4">
               <Form.Label>Contraseña</Form.Label>
-              <Form.Control type="password" placeholder="********" value={password} onChange={(e) => setPassword(e.target.value)} />
+              <Form.Control 
+                type="password" 
+                placeholder="********" 
+                value={password} 
+                onChange={(e) => setPassword(e.target.value)} 
+              />
             </Form.Group>
 
             <div className="d-grid">

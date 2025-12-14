@@ -139,10 +139,10 @@ function Inventario() {
       }
   };
 
-  const cargarPautaPredefinida = async (tipo) => {
+  const cargarPautaPredefinida = async () => { 
       const confirmacion = await Swal.fire({
-          title: `¿Cargar inventario de ${tipo}?`,
-          text: "Se agregarán múltiples materiales automáticamente.",
+          title: '¿Cargar inventario estándar?',
+          text: "Se agregarán los materiales definidos para esta unidad.",
           icon: 'question',
           showCancelButton: true,
           confirmButtonText: 'Sí, cargar',
@@ -154,14 +154,12 @@ function Inventario() {
       setCargando(true);
       try {
           await axios.post('http://127.0.0.1:8000/api/materiales/cargar_pauta/', {
-              carro_id: carroSeleccionado,
-              tipo_pauta: tipo
+              carro_id: carroSeleccionado
           });
-          
-          Swal.fire('Listo', 'Pauta cargada exitosamente', 'success');
+          Swal.fire('Listo', 'Inventario cargado exitosamente', 'success');
           cargarMateriales(carroSeleccionado); 
       } catch (error) {
-          Swal.fire('Error', 'Hubo un problema al cargar la pauta', 'error');
+          Swal.fire('Error', 'Hubo un problema al cargar la pauta. Revisa que el nombre del carro coincida con las claves en el backend.', 'error');
       } finally {
           setCargando(false);
       }
@@ -215,17 +213,11 @@ function Inventario() {
                       <h4>Este carro está vacío</h4>
                       <p className="mb-4">Puedes agregar ítems manualmente o usar una carga rápida:</p>
                       
-                      <div className="d-flex justify-content-center gap-3 flex-wrap">
-                          <Button variant="outline-primary" onClick={() => cargarPautaPredefinida('BOMBA')}>
-                              <FaTint className="me-2"/>Cargar Pauta de Agua
-                          </Button>
-                          <Button variant="outline-warning" className="text-dark" onClick={() => cargarPautaPredefinida('RESCATE')}>
-                              <FaTools className="me-2"/>Cargar Pauta de Rescate
-                          </Button>
-                      </div>
-                          <Button variant="outline-success" onClick={() => cargarPautaPredefinida('FORESTAL')}>
-                            <FaTree className="me-2"/>Cargar Pauta Forestal
-                          </Button>
+                       <div className="d-flex justify-content-center">
+                        <Button variant="primary" size="lg" onClick={cargarPautaPredefinida}>
+                        <FaBoxOpen className="me-2"/>Cargar Inventario Estándar
+                        </Button>
+                       </div>
                   </div>
               ) : (
                   materiales.map(item => (

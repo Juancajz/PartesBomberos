@@ -56,7 +56,7 @@ function App() {
       localStorage.setItem('token_bomberos', tokenRecibido);
       localStorage.setItem('es_admin', esAdmin);
       localStorage.setItem('usuario_nombre', nombreCompleto);
-      
+      axios.defaults.headers.common['Authorization'] = `Bearer ${tokenRecibido}`; 
       setToken(tokenRecibido);
       setUsuario({ es_admin: esAdmin, nombre: nombreCompleto });
   };
