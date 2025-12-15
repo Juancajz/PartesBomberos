@@ -1,9 +1,13 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Container, Row, Col, Card, Button, Nav, Spinner, Modal, Form } from 'react-bootstrap';
+// 1. IMPORTAR LIBRERÍAS DE PDF E ÍCONO
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { 
     FaTint, FaTools, FaMedkit, FaHardHat, FaBroadcastTower, 
-    FaBoxOpen, FaTruck, FaMinus, FaPlus, FaPlusCircle, FaFireExtinguisher, FaTrash, FaTree
+    FaBoxOpen, FaTruck, FaMinus, FaPlus, FaPlusCircle, FaFireExtinguisher, FaTrash, 
+    FaFilePdf 
 } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 
@@ -13,7 +17,6 @@ function Inventario() {
   const [carroSeleccionado, setCarroSeleccionado] = useState(null); 
   const [cargando, setCargando] = useState(false);
   
-  // ESTADO PARA EL FORMULARIO
   const [showModal, setShowModal] = useState(false);
   const [nuevoMaterial, setNuevoMaterial] = useState({
       nombre: '', 
@@ -68,121 +71,104 @@ function Inventario() {
       finally { setCargando(false); }
   };
 
+  // --- 2. FUNCIÓN PARA GENERAR PDF ---
+  const generarPDF = () => {
+      if (!carroActual) return;
+      const doc = new jsPDF();
+
+      // Encabezado
+      doc.setFillColor(220, 53, 69); // Rojo Bomberos
+      doc.rect(0, 0, 210, 25, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(16);
+      doc.text(`INVENTARIO UNIDAD ${carroActual.nombre}`, 105, 17, null, null, "center");
+      
+      // Fecha
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(10);
+      doc.text(`Generado el: ${new Date().toLocaleDateString()}`, 14, 32);
+
+      // Tabla
+      const columnas = ["Nombre del Equipo", "Ubicación", "Categoría", "Cant.", "Estado"];
+      const filas = materiales.map(m => [
+          m.nombre,
+          m.ubicacion || "No definida",
+          CATEGORIAS.find(c => c.clave === m.categoria)?.nombre || m.categoria,
+          m.cantidad,
+          m.estado
+      ]);
+
+      autoTable(doc, {
+          startY: 35,
+          head: [columnas],
+          body: filas,
+          theme: 'striped',
+          headStyles: { fillColor: [50, 50, 50] },
+          styles: { fontSize: 10 },
+          columnStyles: { 0: { fontStyle: 'bold' } }
+      });
+
+      doc.save(`Inventario_${carroActual.nombre}.pdf`);
+  };
+
   const actualizarCantidad = async (material, delta) => {
       const nuevaCantidad = material.cantidad + delta;
       if (nuevaCantidad < 0) return; 
-
       const listaOriginal = [...materiales];
       const listaActualizada = materiales.map(m => m.id === material.id ? {...m, cantidad: nuevaCantidad} : m);
       setMateriales(listaActualizada);
-
-      try {
-          await axios.patch(`http://127.0.0.1:8000/api/materiales/${material.id}/`, { cantidad: nuevaCantidad });
-      } catch (error) {
-          setMateriales(listaOriginal);
-          Swal.fire('Error', 'No se pudo actualizar la cantidad', 'error');
-      }
+      try { await axios.patch(`http://127.0.0.1:8000/api/materiales/${material.id}/`, { cantidad: nuevaCantidad }); } 
+      catch (error) { setMateriales(listaOriginal); Swal.fire('Error', 'No se pudo actualizar', 'error'); }
   };
 
   const eliminarMaterial = async (id, nombre) => {
-      const confirmacion = await Swal.fire({
-          title: '¿Eliminar equipo?',
-          text: `Vas a borrar "${nombre}" permanentemente.`,
-          icon: 'warning',
-          showCancelButton: true,
-          confirmButtonColor: '#d33',
-          cancelButtonColor: '#3085d6',
-          confirmButtonText: 'Sí, borrar',
-          cancelButtonText: 'Cancelar'
-      });
-
-      if (!confirmacion.isConfirmed) return;
-
-      try {
-          await axios.delete(`http://127.0.0.1:8000/api/materiales/${id}/`);
-          setMateriales(materiales.filter(m => m.id !== id));
-          
-          Swal.fire(
-            'Eliminado',
-            'El equipo ha sido retirado del inventario.',
-            'success'
-          );
-      } catch (error) {
-          console.error(error);
-          Swal.fire('Error', 'No se pudo eliminar el equipo', 'error');
+      const confirmacion = await Swal.fire({ title: '¿Eliminar equipo?', text: `Vas a borrar "${nombre}"`, icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, borrar' });
+      if (confirmacion.isConfirmed) {
+          try { await axios.delete(`http://127.0.0.1:8000/api/materiales/${id}/`); setMateriales(materiales.filter(m => m.id !== id)); Swal.fire('Eliminado', '', 'success'); } 
+          catch (error) { Swal.fire('Error', 'No se pudo eliminar', 'error'); }
       }
   };
 
   const handleGuardarMaterial = async () => {
-      if (!nuevoMaterial.nombre) return Swal.fire('Atención', 'Ponle un nombre al equipo', 'warning');
-
+      if (!nuevoMaterial.nombre) return Swal.fire('Atención', 'Ponle un nombre', 'warning');
       try {
-          await axios.post('http://127.0.0.1:8000/api/materiales/', {
-              ...nuevoMaterial,
-              carro: carroSeleccionado,
-              estado: 'OPERATIVO'
-          });
-          
-          Swal.fire({
-              icon: 'success', 
-              title: 'Guardado', 
-              timer: 1000, 
-              showConfirmButton: false
-          });
-          
-          setShowModal(false);
-          setNuevoMaterial({ nombre: '', categoria: 'HERRAMIENTAS', ubicacion: '', cantidad: 1 });
-          cargarMateriales(carroSeleccionado); 
-      } catch (error) {
-          console.error(error);
-          Swal.fire('Error', 'No se pudo guardar el material', 'error');
-      }
+          await axios.post('http://127.0.0.1:8000/api/materiales/', { ...nuevoMaterial, carro: carroSeleccionado, estado: 'OPERATIVO' });
+          Swal.fire({ icon: 'success', title: 'Guardado', timer: 1000, showConfirmButton: false });
+          setShowModal(false); setNuevoMaterial({ nombre: '', categoria: 'HERRAMIENTAS', ubicacion: '', cantidad: 1 }); cargarMateriales(carroSeleccionado); 
+      } catch (error) { Swal.fire('Error', 'No se pudo guardar', 'error'); }
   };
 
   const cargarPautaPredefinida = async () => { 
-      const confirmacion = await Swal.fire({
-          title: '¿Cargar inventario estándar?',
-          text: "Se agregarán los materiales definidos para esta unidad.",
-          icon: 'question',
-          showCancelButton: true,
-          confirmButtonText: 'Sí, cargar',
-          confirmButtonColor: '#198754'
-      });
-
+      const confirmacion = await Swal.fire({ title: '¿Cargar inventario estándar?', icon: 'question', showCancelButton: true, confirmButtonText: 'Sí, cargar' });
       if (!confirmacion.isConfirmed) return;
-
       setCargando(true);
-      try {
-          await axios.post('http://127.0.0.1:8000/api/materiales/cargar_pauta/', {
-              carro_id: carroSeleccionado
-          });
-          Swal.fire('Listo', 'Inventario cargado exitosamente', 'success');
-          cargarMateriales(carroSeleccionado); 
-      } catch (error) {
-          Swal.fire('Error', 'Hubo un problema al cargar la pauta. Revisa que el nombre del carro coincida con las claves en el backend.', 'error');
-      } finally {
-          setCargando(false);
-      }
+      try { await axios.post('http://127.0.0.1:8000/api/materiales/cargar_pauta/', { carro_id: carroSeleccionado }); Swal.fire('Listo', 'Inventario cargado', 'success'); cargarMateriales(carroSeleccionado); } 
+      catch (error) { Swal.fire('Error', 'Problema al cargar pauta', 'error'); } finally { setCargando(false); }
   };
 
   const carroActual = carros.find(c => c.id === carroSeleccionado);
 
   return (
     <Container className="mt-4 mb-5">
-      {/* CABECERA: AHORA USA carroActual.nombre */}
       <div className="d-flex justify-content-between align-items-center mb-4">
           <h2 className="text-dark fw-bold">
               <FaBoxOpen className="me-2"/>
               Inventario {carroActual ? `del ${carroActual.nombre}` : ''}
           </h2>
+          
+          {/* 3. BOTONERA */}
           {carroSeleccionado && (
-              <Button variant="success" onClick={() => setShowModal(true)}>
-                  <FaPlusCircle className="me-2"/>Nuevo Equipo
-              </Button>
+              <div className="d-flex gap-2">
+                  <Button variant="danger" onClick={generarPDF}>
+                      <FaFilePdf className="me-2"/>Descargar PDF
+                  </Button>
+                  <Button variant="success" onClick={() => setShowModal(true)}>
+                      <FaPlusCircle className="me-2"/>Nuevo Equipo
+                  </Button>
+              </div>
           )}
       </div>
 
-      {/* TABS DE CARROS: AHORA USAN carro.nombre */}
       <Card className="shadow-sm border-0 mb-4 bg-white">
           <Card.Body className="p-2">
             <Nav variant="pills" className="justify-content-center gap-2">
@@ -211,10 +197,8 @@ function Inventario() {
                   <div className="text-center text-muted py-5 col-12 bg-light rounded border border-dashed">
                       <FaBoxOpen size={50} className="mb-3 text-secondary opacity-50"/>
                       <h4>Este carro está vacío</h4>
-                      <p className="mb-4">Puedes agregar ítems manualmente o usar una carga rápida:</p>
-                      
-                       <div className="d-flex justify-content-center">
-                        <Button variant="primary" size="lg" onClick={cargarPautaPredefinida}>
+                       <div className="d-flex justify-content-center mt-3">
+                        <Button variant="primary" onClick={cargarPautaPredefinida}>
                         <FaBoxOpen className="me-2"/>Cargar Inventario Estándar
                         </Button>
                        </div>
@@ -223,16 +207,9 @@ function Inventario() {
                   materiales.map(item => (
                       <Col key={item.id} xs={12} sm={6} md={4} lg={3}>
                           <Card className="h-100 shadow-sm border-0 position-relative">
-                              <Button 
-                                variant="link" 
-                                className="position-absolute top-0 end-0 m-2 text-muted p-0"
-                                style={{zIndex: 10}}
-                                onClick={() => eliminarMaterial(item.id, item.nombre)}
-                                title="Eliminar equipo"
-                              >
+                              <Button variant="link" className="position-absolute top-0 end-0 m-2 text-muted p-0" style={{zIndex: 10}} onClick={() => eliminarMaterial(item.id, item.nombre)}>
                                   <FaTrash size={14} className="text-secondary hover-danger"/>
                               </Button>
-
                               <div style={{height: '5px', width: '100%', background: item.estado === 'OPERATIVO' ? '#198754' : '#dc3545'}}></div>
                               <Card.Body className="text-center d-flex flex-column pt-4">
                                   <div className="mb-3 mx-auto p-3 rounded-circle bg-light d-flex align-items-center justify-content-center" style={{width: 70, height: 70}}>
@@ -240,15 +217,10 @@ function Inventario() {
                                   </div>
                                   <Card.Title className="fw-bold fs-6 mb-1">{item.nombre}</Card.Title>
                                   <p className="text-muted small mb-2">{item.ubicacion || "Sin ubicación"}</p>
-                                  
                                   <div className="mt-auto d-flex justify-content-center align-items-center bg-light rounded-pill p-1 border">
-                                      <Button variant="link" size="sm" className="text-danger" onClick={() => actualizarCantidad(item, -1)} disabled={item.cantidad <= 0}>
-                                          <FaMinus/>
-                                      </Button>
+                                      <Button variant="link" size="sm" className="text-danger" onClick={() => actualizarCantidad(item, -1)} disabled={item.cantidad <= 0}><FaMinus/></Button>
                                       <span className="mx-3 fw-bold">{item.cantidad}</span>
-                                      <Button variant="link" size="sm" className="text-success" onClick={() => actualizarCantidad(item, 1)}>
-                                          <FaPlus/>
-                                      </Button>
+                                      <Button variant="link" size="sm" className="text-success" onClick={() => actualizarCantidad(item, 1)}><FaPlus/></Button>
                                   </div>
                               </Card.Body>
                           </Card>
@@ -258,58 +230,17 @@ function Inventario() {
           </Row>
       )}
 
-      {/* MODAL AGREGAR: TITULO CORREGIDO */}
+      {/* MODAL AGREGAR */}
       <Modal show={showModal} onHide={() => setShowModal(false)} centered>
-          <Modal.Header closeButton className="bg-success text-white">
-              <Modal.Title>Agregar al {carroActual?.nombre}</Modal.Title>
-          </Modal.Header>
+          <Modal.Header closeButton className="bg-success text-white"><Modal.Title>Agregar al {carroActual?.nombre}</Modal.Title></Modal.Header>
           <Modal.Body>
               <Form>
-                  <Form.Group className="mb-3">
-                      <Form.Label>Nombre del Equipo</Form.Label>
-                      <Form.Control 
-                        autoFocus
-                        placeholder='Ej: Pitón, Hacha, Radio...'
-                        value={nuevoMaterial.nombre}
-                        onChange={(e) => setNuevoMaterial({...nuevoMaterial, nombre: e.target.value})}
-                      />
-                  </Form.Group>
-                  <Row>
-                      <Col>
-                          <Form.Group className="mb-3">
-                              <Form.Label>Categoría</Form.Label>
-                              <Form.Select 
-                                value={nuevoMaterial.categoria}
-                                onChange={(e) => setNuevoMaterial({...nuevoMaterial, categoria: e.target.value})}
-                              >
-                                  {CATEGORIAS.map(c => <option key={c.clave} value={c.clave}>{c.nombre}</option>)}
-                              </Form.Select>
-                          </Form.Group>
-                      </Col>
-                      <Col>
-                          <Form.Group className="mb-3">
-                              <Form.Label>Cantidad</Form.Label>
-                              <Form.Control type="number" min="1"
-                                value={nuevoMaterial.cantidad}
-                                onChange={(e) => setNuevoMaterial({...nuevoMaterial, cantidad: parseInt(e.target.value) || 0})}
-                              />
-                          </Form.Group>
-                      </Col>
-                  </Row>
-                  <Form.Group>
-                      <Form.Label>Ubicación</Form.Label>
-                      <Form.Control 
-                        placeholder='Ej: Cajonera 1, Techo...'
-                        value={nuevoMaterial.ubicacion}
-                        onChange={(e) => setNuevoMaterial({...nuevoMaterial, ubicacion: e.target.value})}
-                      />
-                  </Form.Group>
+                  <Form.Group className="mb-3"><Form.Label>Nombre</Form.Label><Form.Control autoFocus value={nuevoMaterial.nombre} onChange={(e) => setNuevoMaterial({...nuevoMaterial, nombre: e.target.value})}/></Form.Group>
+                  <Row><Col><Form.Group className="mb-3"><Form.Label>Categoría</Form.Label><Form.Select value={nuevoMaterial.categoria} onChange={(e) => setNuevoMaterial({...nuevoMaterial, categoria: e.target.value})}>{CATEGORIAS.map(c => <option key={c.clave} value={c.clave}>{c.nombre}</option>)}</Form.Select></Form.Group></Col><Col><Form.Group className="mb-3"><Form.Label>Cantidad</Form.Label><Form.Control type="number" min="1" value={nuevoMaterial.cantidad} onChange={(e) => setNuevoMaterial({...nuevoMaterial, cantidad: parseInt(e.target.value) || 0})}/></Form.Group></Col></Row>
+                  <Form.Group><Form.Label>Ubicación</Form.Label><Form.Control value={nuevoMaterial.ubicacion} onChange={(e) => setNuevoMaterial({...nuevoMaterial, ubicacion: e.target.value})}/></Form.Group>
               </Form>
           </Modal.Body>
-          <Modal.Footer>
-              <Button variant="secondary" onClick={() => setShowModal(false)}>Cancelar</Button>
-              <Button variant="success" onClick={handleGuardarMaterial}>Guardar Equipo</Button>
-          </Modal.Footer>
+          <Modal.Footer><Button variant="secondary" onClick={() => setShowModal(false)}>Cancelar</Button><Button variant="success" onClick={handleGuardarMaterial}>Guardar</Button></Modal.Footer>
       </Modal>
     </Container>
   );

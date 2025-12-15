@@ -6,12 +6,11 @@ import SelectorCarros from './SelectorCarros';
 import Swal from 'sweetalert2';
 import { 
     FaClipboardList, FaUserInjured, FaTruck, FaChevronRight, FaChevronLeft, 
-    FaTachometerAlt, FaUserSecret, FaUsers, FaHospital, FaShieldAlt, FaBuilding, FaTree, FaCar
+    FaTachometerAlt, FaUserSecret, FaUsers, FaShieldAlt, FaCar
 } from 'react-icons/fa';
 
 function FormularioParte({ tipoPreseleccionado }) {
   
-  // --- ESTADOS ---
   const [Pagina, setPagina] = useState(1);
   const [subtiposDisponibles, setSubtiposDisponibles] = useState([]);
   const [listaBomberos, setListaBomberos] = useState([]); 
@@ -19,10 +18,8 @@ function FormularioParte({ tipoPreseleccionado }) {
   const [mostrarMapa, setMostrarMapa] = useState(false);
   const [esVehicular, setEsVehicular] = useState(false);
 
-
   const fechaHoy = new Date().toISOString().split('T')[0];
 
-  // ESTADOS ASISTENCIA
   const [asistenciaBomberos, setAsistenciaBomberos] = useState([]);
   const [apoyoExterno, setApoyoExterno] = useState({
     samu: { activo: false, a_cargo: '', patente: '', cantidad: '' },
@@ -32,13 +29,13 @@ function FormularioParte({ tipoPreseleccionado }) {
   });
 
   const [formulario, setFormulario] = useState({
-    // General
     fecha: fechaHoy,
     hora: new Date().toTimeString().slice(0, 5),
     lugar: '',
+    latitud: null,
+    longitud: null,
     tipo: tipoPreseleccionado ? tipoPreseleccionado.id : '',
     subtipo: '',
-    // Personas
     jefe_a_cargo: '',
     quien_anoto: '',
     afectado_rut: '',
@@ -47,13 +44,11 @@ function FormularioParte({ tipoPreseleccionado }) {
     denunciante_rut: '',
     denunciante_nombre: '',
     descripcion: '',
-    // Vehículo
     vehiculo_patente: '',
     vehiculo_marca: '',
     vehiculo_modelo: '',
     vehiculo_color: '',
     vehiculo_tipo: '',
-    // Logística
     maquinista: '',
     hora_salida_cuartel: '',
     hora_llegada_emergencia: '',
@@ -64,7 +59,6 @@ function FormularioParte({ tipoPreseleccionado }) {
     km_llegada: '',
   });
 
-  // --- CARGA DE DATOS ---
   useEffect(() => {
     if (tipoPreseleccionado) {
         const cod = tipoPreseleccionado.codigo;
@@ -77,9 +71,6 @@ function FormularioParte({ tipoPreseleccionado }) {
     axios.get('http://127.0.0.1:8000/api/bomberos/').then(res => setListaBomberos(res.data));
   }, [tipoPreseleccionado]);
 
-  // --- Vaaidacines reglas rut nombre km ---
-
-  // 1. Formateador de RUT (12.345.678-9)
   const formatearRUT = (rut) => {
     let valor = rut.replace(/[^0-9kK]/g, ''); 
     if (valor.length > 1) {
@@ -91,53 +82,49 @@ function FormularioParte({ tipoPreseleccionado }) {
     return valor;
   };
 
-  // 2. Reglas
   const handleInputChange = (e) => {
       const { name, value } = e.target;
 
-      // REGLA: Solo letras 
       if (name === 'afectado_nombre' || name === 'denunciante_nombre') {
-          // Regex: Solo letras, espacios y tildes (áéíóúñ)
           if (value !== '' && !/^[a-zA-Z\u00C0-\u00FF\s]*$/.test(value)) return;
       }
-
-      // REGLA: Teléfono
       if (name === 'afectado_telefono') {
           if (value !== '' && !/^\d*$/.test(value)) return;
           if (value.length > 9) return;
       }
-
-      // REGLA: Kilometraje 
       if (name === 'km_salida' || name === 'km_llegada') {
           if (value < 0) return;
       }
-
-      // REGLA: RUT 
       if (name.includes('rut')) {
-          const rutFormateado = formatearRUT(value);
-          setFormulario({ ...formulario, [name]: rutFormateado });
+          setFormulario({ ...formulario, [name]: formatearRUT(value) });
           return;
       }
-
       setFormulario({ ...formulario, [name]: value });
   };
 
-  const recibirCoordenadas = (dir) => setFormulario({ ...formulario, lugar: dir });
+  const recibirCoordenadas = (direccion, latlng) => {
+    setFormulario(prev => ({
+        ...prev,
+        lugar: direccion || `Coordenadas: ${latlng.lat}, ${latlng.lng}`,
+        latitud: latlng.lat,
+        longitud: latlng.lng
+    }));
+  };
+
   const toggleBombero = (id) => {
     if (asistenciaBomberos.includes(id)) setAsistenciaBomberos(asistenciaBomberos.filter(bId => bId !== id));
     else setAsistenciaBomberos([...asistenciaBomberos, id]);
   };
+  
   const handleExternoCheck = (ent) => setApoyoExterno({ ...apoyoExterno, [ent]: { ...apoyoExterno[ent], activo: !apoyoExterno[ent].activo } });
   const handleExternoChange = (ent, field, val) => setApoyoExterno({ ...apoyoExterno, [ent]: { ...apoyoExterno[ent], [field]: val } });
 
-  // --- NAVEGACIÓN ---
   const mostrarError = (msg) => Swal.fire({ icon: 'warning', title: 'Faltan Datos', text: msg, confirmButtonColor: '#dc3545' });
 
   const irAlPagina = (nuevoPagina) => {
     if (Pagina === 1 && nuevoPagina > 1) {
         if (!formulario.jefe_a_cargo) return mostrarError("El Oficial a Cargo es obligatorio.");
         if (!formulario.quien_anoto) return mostrarError("El Voluntario Anotador es obligatorio.");
-        if (formulario.afectado_rut && formulario.afectado_rut.length < 8) return mostrarError("El RUT del afectado parece incompleto.");
     }
     if (Pagina === 2 && nuevoPagina > 2) {
         if (!formulario.lugar || !formulario.fecha) return mostrarError("Fecha y Lugar son obligatorios.");
@@ -145,8 +132,6 @@ function FormularioParte({ tipoPreseleccionado }) {
     if (Pagina === 3 && nuevoPagina > 3) {
         if (carrosSeleccionados.length === 0) return mostrarError("Selecciona al menos un Carro.");
         if (!formulario.maquinista) return mostrarError("Falta el Maquinista.");
-        if (!formulario.hora_salida_cuartel || !formulario.hora_llegada_emergencia) return mostrarError("Hora de Salida y Llegada son obligatorias.");
-        if (!formulario.km_salida || !formulario.km_llegada) return mostrarError("Falta Kilometraje.");
     }
     setPagina(nuevoPagina);
     window.scrollTo(0, 0);
@@ -155,7 +140,6 @@ function FormularioParte({ tipoPreseleccionado }) {
   const handleSubmit = async (e) => {
     if(e) e.preventDefault();
     const limpiar = (v) => (v === "" || v === "0") ? null : v;
-    
 
     let telefonoFinal = formulario.afectado_telefono;
     if (telefonoFinal && !telefonoFinal.startsWith('+56')) {
@@ -165,6 +149,9 @@ function FormularioParte({ tipoPreseleccionado }) {
     const payload = {
         fecha_hora_emergencia: `${formulario.fecha}T${formulario.hora}:00`,
         lugar: formulario.lugar,
+        latitud: formulario.latitud,
+        longitud: formulario.longitud,
+        estado: 'BORRADOR',
         descripcion: formulario.descripcion || "Sin descripción.", 
         tipo_emergencia: formulario.tipo,
         subtipo_emergencia: limpiar(formulario.subtipo), 
@@ -202,6 +189,7 @@ function FormularioParte({ tipoPreseleccionado }) {
         await axios.post('http://127.0.0.1:8000/api/partes/', payload);
         Swal.fire({ icon: 'success', title: '¡Parte Guardado!', confirmButtonColor: '#198754' }).then(() => window.location.reload());
     } catch (error) {
+        console.error(error);
         Swal.fire({ icon: 'error', title: 'Error', text: 'Revisa la consola.', confirmButtonColor: '#dc3545' });
     }
   };
@@ -218,7 +206,6 @@ function FormularioParte({ tipoPreseleccionado }) {
 
         <Card.Body className="p-4">
           <Form>
-            {/* Pagina 1 */}
             {Pagina === 1 && (
                 <div className="animacion-fade">
                     <h5 className="text-secondary border-bottom pb-2"><FaUserInjured className="me-2"/>Involucrados</h5>
@@ -245,24 +232,28 @@ function FormularioParte({ tipoPreseleccionado }) {
                 </div>
             )}
 
-            {/* Pagina 2: GENERAL */}
             {Pagina === 2 && (
                 <div className="animacion-fade">
                     <h5 className="text-secondary border-bottom pb-2"><FaClipboardList className="me-2"/>Datos Generales</h5>
                     <Row className="mb-3">
                         <Col md={6}>
                             <Form.Label>Fecha (*)</Form.Label>
-                            {/* FECHA HOY */}
                             <Form.Control type="date" name="fecha" max={fechaHoy} value={formulario.fecha} onChange={handleInputChange}/>
                         </Col>
                         <Col md={6}><Form.Label>Hora Alarma (*)</Form.Label><Form.Control type="time" name="hora" value={formulario.hora} onChange={handleInputChange}/></Col>
                     </Row>
-                    <Form.Group className="mb-3"><Form.Label>Lugar (*)</Form.Label><div className="d-flex gap-2 mb-2"><Form.Control value={formulario.lugar} name="lugar" onChange={handleInputChange} placeholder="Dirección..."/><Button type="button" variant={mostrarMapa?"secondary":"info"} onClick={()=>setMostrarMapa(!mostrarMapa)} className="text-white">{mostrarMapa?"Cerrar":"Mapa"}</Button></div>{mostrarMapa && <SelectorMapa alSeleccionarUbicacion={recibirCoordenadas}/>}</Form.Group>
+                    <Form.Group className="mb-3">
+                        <Form.Label>Lugar (*)</Form.Label>
+                        <div className="d-flex gap-2 mb-2">
+                            <Form.Control value={formulario.lugar} name="lugar" onChange={handleInputChange} placeholder="Dirección..." />
+                            <Button type="button" variant={mostrarMapa?"secondary":"info"} onClick={()=>setMostrarMapa(!mostrarMapa)} className="text-white">{mostrarMapa?"Cerrar":"Mapa"}</Button>
+                        </div>
+                        {mostrarMapa && <SelectorMapa alSeleccionarUbicacion={recibirCoordenadas}/>}
+                    </Form.Group>
                     <Form.Group className="mb-3"><Form.Label>Subtipo</Form.Label><Form.Select name="subtipo" value={formulario.subtipo} onChange={handleInputChange} disabled={!subtiposDisponibles.length}><option value="">{subtiposDisponibles.length?"Seleccione...":"Sin detalle"}</option>{subtiposDisponibles.map(s=><option key={s.id} value={s.id}>{s.codigo_subtipo} - {s.descripcion}</option>)}</Form.Select></Form.Group>
                 </div>
             )}
 
-            {/* Pagina 3: LOGÍSTICA*/}
             {Pagina === 3 && (
                 <div className="animacion-fade">
                     <h5 className="text-secondary border-bottom pb-2"><FaTruck className="me-2"/>Recursos y Tiempos</h5>
@@ -272,7 +263,6 @@ function FormularioParte({ tipoPreseleccionado }) {
                 </div>
             )}
 
-            {/* Pagina 4 */}
             {Pagina === 4 && (
                 <div className="animacion-fade">
                     <Row><Col md={6} className="border-end"><h5 className="text-secondary mb-3"><FaUsers className="me-2"/>Asistencia Cias</h5>{['PRIMERA', 'SEGUNDA', 'TERCERA'].map(cia => (<div key={cia} className="mb-4"><h6 className="text-danger fw-bold border-bottom">{cia} COMPAÑÍA</h6><div className="d-flex flex-wrap gap-2">{bomberosPorCia(cia).map(bombero => {const seleccionado = asistenciaBomberos.includes(bombero.id);return (<Button key={bombero.id} size="sm" variant={seleccionado ? "danger" : "outline-secondary"} onClick={() => toggleBombero(bombero.id)} style={{borderRadius: '20px'}} type="button">{bombero.nombre_completo || bombero.username}</Button>)})}{bomberosPorCia(cia).length === 0 && <span className="text-muted small">Sin voluntarios</span>}</div>
@@ -284,7 +274,6 @@ function FormularioParte({ tipoPreseleccionado }) {
                 </div>
             )}
 
-            {/* BOTONES */}
             <div className="d-flex justify-content-center mt-4 gap-3">{[1, 2, 3, 4].map(n => (<Button key={n} type="button" variant={Pagina === n ? "danger" : "outline-secondary"} className="rounded-circle fw-bold" style={{width: 40, height: 40}} onClick={() => irAlPagina(n)}>{n}</Button>))}</div>
             <div className="d-flex justify-content-between mt-4 border-top pt-3"><Button type="button" variant="outline-secondary" onClick={() => irAlPagina(Pagina - 1)} disabled={Pagina === 1}><FaChevronLeft/> Atrás</Button>{Pagina < 4 ? <Button type="button" variant="danger" onClick={() => irAlPagina(Pagina + 1)}>Siguiente <FaChevronRight/></Button> : <Button type="button" variant="success" onClick={handleSubmit}>Finalizar y Guardar ✅</Button>}</div>
           </Form>

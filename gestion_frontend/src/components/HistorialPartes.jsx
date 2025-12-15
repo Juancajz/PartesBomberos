@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Container, Table, Badge, Button, Form, InputGroup, Modal, Row, Col, Card } from 'react-bootstrap';
-import { FaSearch, FaEye, FaClipboardList, FaRegClock, FaUserTie, FaMapMarkerAlt, FaUsers, FaFire, FaFilePdf } from 'react-icons/fa';
-// IMPORTAMOS LIBRERÍAS PDF
+import { 
+    FaSearch, FaEye, FaClipboardList, FaRegClock, FaUserTie, 
+    FaMapMarkerAlt, FaUsers, FaFire, FaFilePdf, FaCheckCircle, FaHourglassHalf 
+} from 'react-icons/fa';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import Swal from 'sweetalert2';
 
 function HistorialPartes() {
   const [partes, setPartes] = useState([]);
@@ -22,7 +25,17 @@ function HistorialPartes() {
       const res = await axios.get('http://127.0.0.1:8000/api/partes/');
       const ordenados = res.data.sort((a, b) => new Date(b.fecha_hora_emergencia) - new Date(a.fecha_hora_emergencia));
       setPartes(ordenados);
-    } catch (error) { console.error("Error cargando historial:", error); }
+    } catch (error) { console.error(error); }
+  };
+
+  const aprobarParte = async (id) => {
+    try {
+        await axios.patch(`http://127.0.0.1:8000/api/partes/${id}/`, { estado: 'CERRADO' });
+        cargarPartes();
+        Swal.fire('Aprobado', 'El parte ha sido cerrado exitosamente.', 'success');
+    } catch (error) {
+        Swal.fire('Error', 'No tienes permisos para aprobar.', 'error');
+    }
   };
 
   const partesFiltrados = partes.filter(parte => 
@@ -56,13 +69,11 @@ function HistorialPartes() {
       );
   };
 
-  // --- FUNCIÓN GENERADORA DE PDF (RESTAURADA) ---
   const generarPDF = () => {
       const doc = new jsPDF();
       const p = parteSeleccionado;
       const tiempos = getTiempos(p);
 
-      // 1. ENCABEZADO
       doc.setFontSize(18);
       doc.setTextColor(220, 53, 69);
       doc.text("CUERPO DE BOMBEROS LAJA", 105, 20, null, null, "center");
@@ -72,7 +83,6 @@ function HistorialPartes() {
       doc.text(`Informe de Emergencia N° ${p.id}`, 105, 30, null, null, "center");
       doc.line(20, 35, 190, 35);
 
-      // 2. DATOS
       doc.setFontSize(10);
       doc.text(`Fecha: ${formatearFechaHora(p.fecha_hora_emergencia)}`, 20, 45);
       doc.text(`Clave: ${p.tipo_detalle?.codigo} - ${p.tipo_detalle?.descripcion}`, 110, 45);
@@ -87,7 +97,6 @@ function HistorialPartes() {
       const descSplit = doc.splitTextToSize(p.descripcion || "Sin descripción", 170);
       doc.text(descSplit, 20, descY + 7);
 
-      // 3. TIEMPOS
       const nextY = descY + 7 + (descSplit.length * 5) + 10;
       autoTable(doc, {
           startY: nextY,
@@ -97,7 +106,6 @@ function HistorialPartes() {
           headStyles: { fillColor: [220, 53, 69] }
       });
 
-      // 4. PERSONAL
       const yMando = doc.lastAutoTable.finalY + 10;
       doc.text(`Oficial a Cargo: ${p.jefe_nombre || 'Sin registro'}`, 20, yMando);
       
@@ -122,7 +130,6 @@ function HistorialPartes() {
           });
       }
 
-      // 5. FIRMA
       const finalY = doc.lastAutoTable.finalY + 40;
       if (finalY < 270) {
           doc.line(70, finalY, 140, finalY);
@@ -150,6 +157,7 @@ function HistorialPartes() {
                 <th className="py-3">Clave</th>
                 <th className="py-3">Lugar</th>
                 <th className="py-3">Oficial a Cargo</th>
+                <th className="py-3 text-center">Estado</th>
                 <th className="text-center py-3">Acciones</th>
                 </tr>
             </thead>
@@ -164,7 +172,27 @@ function HistorialPartes() {
                     <td>{parte.lugar}</td>
                     <td className="text-dark fw-bold">{parte.jefe_nombre || "Sin registro"}</td>
                     <td className="text-center">
-                        <Button variant="outline-primary" size="sm" className="rounded-circle shadow-sm" onClick={() => handleShow(parte)} style={{width: 35, height: 35}}><FaEye /></Button>
+                        {parte.estado === 'CERRADO' ? (
+                            <Badge bg="success"><FaCheckCircle className="me-1"/>Cerrado</Badge>
+                        ) : (
+                            <Badge bg="warning" text="dark"><FaHourglassHalf className="me-1"/>Borrador</Badge>
+                        )}
+                    </td>
+                    <td className="text-center">
+                        <Button variant="outline-primary" size="sm" className="rounded-circle shadow-sm me-1" onClick={() => handleShow(parte)} style={{width: 35, height: 35}}><FaEye /></Button>
+                        
+                        {parte.estado !== 'CERRADO' && ['DIRECTOR', 'CAPITAN', 'COMANDANTE'].includes(localStorage.getItem('usuario_rango')) && (
+                            <Button 
+                                variant="outline-success" 
+                                size="sm" 
+                                className="rounded-circle shadow-sm" 
+                                title="Aprobar y Cerrar"
+                                onClick={() => aprobarParte(parte.id)}
+                                style={{width: 35, height: 35}}
+                            >
+                                <FaCheckCircle />
+                            </Button>
+                        )}
                     </td>
                 </tr>
                 ))}
@@ -173,7 +201,6 @@ function HistorialPartes() {
         </div>
       </Card>
 
-      {/* ================= MODAL DETALLE ================= */}
       <Modal show={showModal} onHide={handleClose} size="xl" centered>
         <Modal.Header closeButton className="bg-danger text-white">
           <Modal.Title className="fw-bold">📌 Detalle del Parte: {parteSeleccionado?.tipo_detalle?.codigo}</Modal.Title>
@@ -250,13 +277,10 @@ function HistorialPartes() {
             </Row>
           )}
         </Modal.Body>
-        {/* BOTONES DEL PIE */}
         <Modal.Footer className="bg-light d-flex justify-content-between">
-          {/* BOTÓN PDF */}
           <Button variant="danger" onClick={generarPDF}>
             <FaFilePdf className="me-2"/>Descargar PDF Oficial
           </Button>
-          
           <Button variant="secondary" onClick={handleClose}>
             Cerrar
           </Button>

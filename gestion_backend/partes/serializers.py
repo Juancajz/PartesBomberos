@@ -25,7 +25,7 @@ class AsistenciaCarroSerializer(serializers.ModelSerializer):
 class ApoyoExternoSerializer(serializers.ModelSerializer):
     class Meta: model = ApoyoExterno; fields = '__all__'
 
-# --- 2. SERIALIZER PRINCIPAL (ParteSerializer usa a los de arriba) ---
+# --- 2. SERIALIZER PRINCIPAL ---
 
 class ParteSerializer(serializers.ModelSerializer):
     # LECTURA (Nested Serializers)

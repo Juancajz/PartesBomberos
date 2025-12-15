@@ -18,7 +18,8 @@ class SubTipoEmergencia(models.Model):
 class Parte(models.Model):
     fecha_hora_emergencia = models.DateTimeField()
     lugar = models.CharField(max_length=255)
-    
+    latitud = models.FloatField(null=True, blank=True)
+    longitud = models.FloatField(null=True, blank=True)
     # Relaciones
     tipo_emergencia = models.ForeignKey(TipoEmergencia, on_delete=models.PROTECT)
     subtipo_emergencia = models.ForeignKey(SubTipoEmergencia, on_delete=models.PROTECT, null=True, blank=True)
@@ -43,6 +44,14 @@ class Parte(models.Model):
 
     descripcion = models.TextField()
     hora_extincion = models.TimeField(null=True, blank=True)
+
+    #Estado
+    ESTADOS_PARTE = [
+        ('BORRADOR', 'Borrador'),
+        ('REVISION', 'En Revisión'),
+        ('CERRADO', 'Cerrado / Aprobado'),
+    ]
+    estado = models.CharField(max_length=20, choices=ESTADOS_PARTE, default='BORRADOR')
 
     # Snapshots
     jefe_a_cargo_rango = models.CharField(max_length=100, blank=True, null=True)

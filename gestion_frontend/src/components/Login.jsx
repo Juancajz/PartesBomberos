@@ -24,8 +24,10 @@ function Login({ onLogin }) {
       const resMe = await axios.get('http://127.0.0.1:8000/api/bomberos/me/', config);
       const esAdmin = resMe.data.is_staff;
       const nombreCompleto = resMe.data.nombre_completo || resMe.data.username; 
+      const rango = resMe.data.rango; 
+      localStorage.setItem('usuario_rango', rango);
       localStorage.setItem('token_bomberos', token);
-      onLogin(token, esAdmin, nombreCompleto);
+      onLogin(token, esAdmin, nombreCompleto,rango);
       Swal.fire({
         icon: 'success',
         title: `Bienvenido/a`,

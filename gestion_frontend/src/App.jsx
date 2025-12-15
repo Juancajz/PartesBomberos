@@ -23,9 +23,9 @@ function App() {
   
   const [usuario, setUsuario] = useState({ 
       es_admin: localStorage.getItem('es_admin') === 'true',
-      nombre: localStorage.getItem('usuario_nombre') || 'Usuario'
+      nombre: localStorage.getItem('usuario_nombre') || 'Usuario',
+      rango: localStorage.getItem('usuario_rango') || '',
   });
-  
   const [vista, setVista] = useState('seleccion'); 
   const [emergenciaSeleccionada, setEmergenciaSeleccionada] = useState(null);
 
@@ -52,13 +52,14 @@ function App() {
   }, [token]);
 
   // 3. Login / Logout / Navegación
-  const handleLoginSuccess = (tokenRecibido, esAdmin, nombreCompleto) => {
-      localStorage.setItem('token_bomberos', tokenRecibido);
-      localStorage.setItem('es_admin', esAdmin);
-      localStorage.setItem('usuario_nombre', nombreCompleto);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${tokenRecibido}`; 
-      setToken(tokenRecibido);
-      setUsuario({ es_admin: esAdmin, nombre: nombreCompleto });
+  const handleLoginSuccess = (tokenRecibido, esAdmin, nombreCompleto, rangoRecibido) => {
+    localStorage.setItem('token_bomberos', tokenRecibido);
+    localStorage.setItem('es_admin', esAdmin);
+    localStorage.setItem('usuario_nombre', nombreCompleto);
+    localStorage.setItem('usuario_rango', rangoRecibido);
+    axios.defaults.headers.common['Authorization'] = `Bearer ${tokenRecibido}`; 
+    setToken(tokenRecibido);
+    setUsuario({ es_admin: esAdmin, nombre: nombreCompleto, rango: rangoRecibido });
   };
 
   const handleLogout = () => {
@@ -128,19 +129,21 @@ function App() {
                     <FaClipboardList className="me-2 mb-1"/>Historial
                 </Nav.Link>
 
-                <Nav.Link onClick={() => setVista('inventario')} style={linkStyle('inventario')}>
-                    <FaBoxOpen className="me-2 mb-1"/>Inventario
-                </Nav.Link>
+                {(usuario?.es_admin || !['VOLUNTARIO', 'TESORERO','SECRETARIO'].includes(usuario?.rango)) && (
+                    <Nav.Link onClick={() => setVista('inventario')} style={linkStyle('inventario')}>
+                        <FaBoxOpen className="me-2 mb-1"/>Inventario
+                    </Nav.Link>
+                )}
                 
                 {/* --- MENÚ ADMIN --- */}
-                {usuario?.es_admin && (
+                {(usuario?.es_admin || ['DIRECTOR', 'CAPITAN','SUPERINTENDENTE', 'COMANDANTE'].includes(usuario?.rango)) && (
                     <>
-                        <Nav.Link onClick={() => setVista('estadisticas')} style={linkStyle('estadisticas')}>
-                            <FaChartPie className="me-2 mb-1"/>Estadísticas
-                        </Nav.Link>
-                        <Nav.Link onClick={() => setVista('usuarios')} style={{...linkStyle('usuarios'), color: '#ffc107'}}>
-                            <FaUserCog className="me-2 mb-1"/>Personal
-                        </Nav.Link>
+                    <Nav.Link onClick={() => setVista('estadisticas')} style={linkStyle('estadisticas')}>
+                        <FaChartPie className="me-2 mb-1"/>Estadísticas
+                    </Nav.Link>
+                    <Nav.Link onClick={() => setVista('usuarios')} style={{...linkStyle('usuarios'), color: '#ffc107'}}>
+                        <FaUserCog className="me-2 mb-1"/>Personal
+                    </Nav.Link>
                     </>
                 )}
             </Nav>
@@ -148,7 +151,12 @@ function App() {
             <Nav className="align-items-center gap-3 mt-3 mt-lg-0">
                 <div className="text-white d-flex align-items-center me-2">
                     <FaUserCircle size={20} className="me-2 opacity-75"/>
-                    <span className="fw-bold">{usuario.nombre}</span>
+                    <span className="fw-bold me-1">
+                        {usuario.nombre}
+                    </span>
+                    <span className="fw-bold" style={{ color: '#ffc107' }}>
+                        {usuario.rango}
+                    </span>
                 </div>
 
                 {usuario?.es_admin && (
@@ -171,18 +179,12 @@ function App() {
 
       {/* ---  VISTAS --- */}
       
-      {vista === 'seleccion' && <SeleccionEmergencia alSeleccionar={alSeleccionarEmergencia} />}
-      
-      {vista === 'formulario' && <FormularioParte tipoPreseleccionado={emergenciaSeleccionada} />}
-      
-      {vista === 'historial' && <HistorialPartes />}
-      
-      {vista === 'inventario' && <Inventario />}
-
-      {/* Admin */}
-      {vista === 'estadisticas' && usuario?.es_admin && <Estadisticas />}
-      
-      {vista === 'usuarios' && usuario?.es_admin && <GestionUsuarios />}
+        {vista === 'seleccion' && <SeleccionEmergencia alSeleccionar={alSeleccionarEmergencia} />}            
+        {vista === 'formulario' && <FormularioParte tipoPreseleccionado={emergenciaSeleccionada} />}
+        {vista === 'historial' && <HistorialPartes />}
+        {vista === 'inventario' && (usuario?.es_admin || !['VOLUNTARIO', 'TESORERO','SECRETARIO'].includes(usuario?.rango)) && <Inventario />}
+        {vista === 'estadisticas' && (usuario?.es_admin || ['DIRECTOR', 'CAPITAN', 'SUPERINTENDENTE', 'COMANDANTE'].includes(usuario?.rango)) && <Estadisticas />}      
+        {vista === 'usuarios' && (usuario?.es_admin || ['DIRECTOR', 'CAPITAN', 'SUPERINTENDENTE', 'COMANDANTE'].includes(usuario?.rango)) && <GestionUsuarios />}
       
     </div>
   );

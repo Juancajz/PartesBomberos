@@ -5,52 +5,41 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell, LabelList 
 } from 'recharts';
-import { FaChartBar, FaChartPie, FaFireExtinguisher, FaUsers, FaTrophy, FaFileExcel, FaFilter, FaCalendarAlt } from 'react-icons/fa';
+import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
+import { 
+    FaChartBar, FaChartPie, FaFireExtinguisher, FaUsers, FaTrophy, 
+    FaFileExcel, FaMapMarkerAlt 
+} from 'react-icons/fa';
 import * as XLSX from 'xlsx';
 
 function Estadisticas() {
-  // Datos Crudos (Todos)
   const [allPartes, setAllPartes] = useState([]);
-  
-  // Datos Filtrados (Para gráficos)
   const [dataTipos, setDataTipos] = useState([]);
   const [dataCias, setDataCias] = useState([]);
   const [totalPartes, setTotalPartes] = useState(0);
   const [totalAsistencias, setTotalAsistencias] = useState(0);
-
-  // Filtros
   const [mesesDisponibles, setMesesDisponibles] = useState([]);
-  const [filtroMes, setFiltroMes] = useState('todos'); // 'todos' o 'YYYY-MM'
-
-  // Modal Detalle
+  const [filtroMes, setFiltroMes] = useState('todos');
   const [showModal, setShowModal] = useState(false);
   const [ciaSeleccionada, setCiaSeleccionada] = useState("");
   const [rankingVoluntarios, setRankingVoluntarios] = useState([]);
 
   const COLORES_PIE = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
-  // 1. CARGAR DATOS INICIALES
   useEffect(() => {
     const cargar = async () => {
         try {
             const res = await axios.get('http://127.0.0.1:8000/api/partes/');
             const datos = res.data;
             setAllPartes(datos);
-
-            // Extraer meses únicos para el select (Formato YYYY-MM)
             const mesesUnicos = [...new Set(datos.map(p => p.fecha_hora_emergencia.slice(0, 7)))];
-            // Ordenar descendente (más nuevo primero)
             setMesesDisponibles(mesesUnicos.sort().reverse());
-        } catch (error) {
-            console.error("Error:", error);
-        }
+        } catch (error) { console.error(error); }
     };
     cargar();
   }, []);
 
-  // 2. RECALCULAR GRÁFICOS CUANDO CAMBIA EL FILTRO O LOS DATOS
   useEffect(() => {
-      // A. Filtramos la lista maestra
       let partesFiltrados = allPartes;
       if (filtroMes !== 'todos') {
           partesFiltrados = allPartes.filter(p => p.fecha_hora_emergencia.startsWith(filtroMes));
@@ -58,7 +47,6 @@ function Estadisticas() {
 
       setTotalPartes(partesFiltrados.length);
 
-      // B. Calcular Emergencias por Tipo
       const conteoTipos = {};
       partesFiltrados.forEach(p => {
         const codigo = p.tipo_detalle?.codigo || 'S/I';
@@ -70,7 +58,6 @@ function Estadisticas() {
       }));
       setDataTipos(arrayTipos);
 
-      // C. Calcular Asistencia por Compañía
       const conteoCias = { 'PRIMERA': 0, 'SEGUNDA': 0, 'TERCERA': 0 };
       let sumaAsistencias = 0;
 
@@ -90,9 +77,8 @@ function Estadisticas() {
       
       setDataCias(arrayCias);
 
-  }, [allPartes, filtroMes]); // Se ejecuta si cambia allPartes o filtroMes
+  }, [allPartes, filtroMes]);
 
-  // --- HELPERS ---
   const formatearMes = (yyyyMm) => {
       const [year, month] = yyyyMm.split('-');
       const nombreMes = new Date(year, month - 1).toLocaleString('es-CL', { month: 'long' });
@@ -103,7 +89,6 @@ function Estadisticas() {
       const ciaName = data.name; 
       setCiaSeleccionada(ciaName);
 
-      // OJO: Calculamos el ranking usando SOLO los partes filtrados
       let partesActivos = allPartes;
       if (filtroMes !== 'todos') {
           partesActivos = allPartes.filter(p => p.fecha_hora_emergencia.startsWith(filtroMes));
@@ -135,7 +120,6 @@ function Estadisticas() {
   };
 
   const exportarGeneral = () => {
-      // Exportamos lo que esté filtrado en pantalla
       let partesAExportar = allPartes;
       if (filtroMes !== 'todos') {
           partesAExportar = allPartes.filter(p => p.fecha_hora_emergencia.startsWith(filtroMes));
@@ -147,18 +131,18 @@ function Estadisticas() {
           Clave: p.tipo_detalle?.codigo,
           Descripcion: p.tipo_detalle?.descripcion,
           Lugar: p.lugar,
-          Oficial: p.jefe_nombre
+          Oficial: p.jefe_nombre,
+          Latitud: p.latitud,
+          Longitud: p.longitud,
+          Estado: p.estado
       }));
       descargarExcel(datosLimpios, `Reporte_Bomberos_${filtroMes}`);
   };
 
   return (
     <Container className="mt-5 mb-5">
-      
-      {/* CABECERA CON FILTRO */}
       <div className="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-3">
         <h2 className="text-secondary fw-bold mb-0">📊 Panel de Estadísticas</h2>
-        
         <div className="d-flex gap-2">
             <Form.Select 
                 value={filtroMes} 
@@ -171,7 +155,6 @@ function Estadisticas() {
                     <option key={mes} value={mes}>{formatearMes(mes)}</option>
                 ))}
             </Form.Select>
-
             <Button variant="success" onClick={exportarGeneral}>
                 <FaFileExcel className="me-2"/>Excel
             </Button>
@@ -253,7 +236,38 @@ function Estadisticas() {
         </Col>
       </Row>
 
-      {/* MODAL RANKING */}
+      {/* --- SECCIÓN MAPA DE CALOR --- */}
+      <Row className="mt-4">
+        <Col>
+            <Card className="shadow border-0">
+                <Card.Header className="bg-white fw-bold">
+                    <FaMapMarkerAlt className="me-2"/>Mapa de Incidentes (Zonas Calientes)
+                </Card.Header>
+                <Card.Body style={{ height: "400px", padding: 0 }}>
+                    <MapContainer center={[-37.2703, -72.7038]} zoom={13} style={{ height: "100%", width: "100%" }}>
+                        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                        {allPartes.map((p, idx) => (
+                            p.latitud && p.longitud && (
+                                <CircleMarker 
+                                    key={idx}
+                                    center={[p.latitud, p.longitud]}
+                                    radius={10} 
+                                    pathOptions={{ color: 'red', fillColor: '#f03', fillOpacity: 0.3, stroke: false }}
+                                >
+                                    <Popup>
+                                        <b>{p.tipo_detalle?.codigo}</b><br/>
+                                        {p.lugar}<br/>
+                                        {new Date(p.fecha_hora_emergencia).toLocaleDateString()}
+                                    </Popup>
+                                </CircleMarker>
+                            )
+                        ))}
+                    </MapContainer>
+                </Card.Body>
+            </Card>
+        </Col>
+      </Row>
+
       <Modal show={showModal} onHide={() => setShowModal(false)} size="lg" centered>
         <Modal.Header closeButton className="bg-primary text-white">
             <Modal.Title><FaTrophy className="me-2 text-warning"/>Ranking: {ciaSeleccionada} ({filtroMes === 'todos' ? 'Histórico' : formatearMes(filtroMes)})</Modal.Title>
@@ -278,7 +292,6 @@ function Estadisticas() {
             <Button variant="secondary" onClick={() => setShowModal(false)}>Cerrar</Button>
         </Modal.Footer>
       </Modal>
-
     </Container>
   );
 }
