@@ -1,8 +1,6 @@
 from django.db import models
 
-# Create your models here.
 class Carro(models.Model):
-    
     
     ESTADO_CHOICES = [
         ('EN_SERVICIO', 'En Servicio'),
@@ -15,15 +13,19 @@ class Carro(models.Model):
             ('ESCALA', 'Escala'),
             ('RESCATE', 'Rescate'),
             ('FORESTAL', 'Forestal'),
-            ('Z', 'Cisterna (Z)'),
-            ('OTRO', 'Otro'),
+            ('CISTERNA', 'Cisterna (Z)'),
+            ('OTRO', 'Otro (Comandancia/Transporte)'),
         ]
 
-    nombre = models.CharField(max_length=50,unique=True)
-    patente = models.CharField(max_length=10,blank=True,null=True)
-    modelo = models.CharField(max_length=100,blank=True,null=True)
-    ano = models.IntegerField(blank=True, null=True)
+    nombre = models.CharField(max_length=50, unique=True) 
+    patente = models.CharField(max_length=10, blank=True, null=True)
+    marca = models.CharField(max_length=50, blank=True, null=True)  
+    modelo = models.CharField(max_length=100, blank=True, null=True)
+    ano = models.IntegerField(blank=True, null=True, verbose_name="Año Fabricación")
+    ano_llegada = models.IntegerField(blank=True, null=True, verbose_name="Año Llegada") 
+    
     capacidad_personal = models.IntegerField(default=0)
+    capacidad_agua = models.IntegerField(default=0, verbose_name="Litros de Agua") 
 
     tipo = models.CharField(
             max_length=50, 
@@ -38,4 +40,4 @@ class Carro(models.Model):
         )
 
     def __str__(self):
-        return self.nombre
+        return f"{self.nombre} - {self.tipo}"

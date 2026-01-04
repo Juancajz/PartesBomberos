@@ -1,0 +1,114 @@
+[
+  {
+    "model": "carros.carro",
+    "pk": 1,
+    "fields": {
+      "nombre": "B-1",
+      "tipo": "BOMBA",
+      "estado": "EN_SERVICIO",
+      "capacidad_personal": 0,
+      "capacidad_agua": 0,
+      "marca": null,
+      "modelo": null,
+      "patente": null,
+      "ano": null,
+      "ano_llegada": null
+    }
+  },
+  {
+    "model": "carros.carro",
+    "pk": 2,
+    "fields": {
+      "nombre": "R-1",
+      "tipo": "RESCATE",
+      "estado": "EN_SERVICIO",
+      "capacidad_personal": 0,
+      "capacidad_agua": 0,
+      "marca": null,
+      "modelo": null,
+      "patente": null,
+      "ano": null,
+      "ano_llegada": null
+    }
+  },
+  {
+    "model": "carros.carro",
+    "pk": 3,
+    "fields": {
+      "nombre": "B-2",
+      "tipo": "BOMBA",
+      "estado": "EN_SERVICIO",
+      "capacidad_personal": 0,
+      "capacidad_agua": 0,
+      "marca": null,
+      "modelo": null,
+      "patente": null,
+      "ano": null,
+      "ano_llegada": null
+    }
+  },
+  {
+    "model": "carros.carro",
+    "pk": 4,
+    "fields": {
+      "nombre": "B-3",
+      "tipo": "BOMBA",
+      "estado": "EN_SERVICIO",
+      "capacidad_personal": 0,
+      "capacidad_agua": 0,
+      "marca": null,
+      "modelo": null,
+      "patente": null,
+      "ano": null,
+      "ano_llegada": null
+    }
+  },
+  {
+    "model": "carros.carro",
+    "pk": 5,
+    "fields": {
+      "nombre": "F-3",
+      "tipo": "FORESTAL",
+      "estado": "EN_SERVICIO",
+      "capacidad_personal": 0,
+      "capacidad_agua": 0,
+      "marca": null,
+      "modelo": null,
+      "patente": null,
+      "ano": null,
+      "ano_llegada": null
+    }
+  },
+  {
+    "model": "carros.carro",
+    "pk": 6,
+    "fields": {
+      "nombre": "K-1",
+      "tipo": "OTRO",
+      "estado": "EN_SERVICIO",
+      "capacidad_personal": 0,
+      "capacidad_agua": 0,
+      "marca": null,
+      "modelo": null,
+      "patente": null,
+      "ano": null,
+      "ano_llegada": null
+    }
+  },
+  {
+    "model": "carros.carro",
+    "pk": 7,
+    "fields": {
+      "nombre": "J-1",
+      "tipo": "OTRO",
+      "estado": "EN_SERVICIO",
+      "capacidad_personal": 0,
+      "capacidad_agua": 0,
+      "marca": null,
+      "modelo": null,
+      "patente": null,
+      "ano": null,
+      "ano_llegada": null
+    }
+  }
+]

@@ -1,0 +1,36 @@
+[
+  { "model": "partes.tipoemergencia", "pk": 1, "fields": { "codigo": "10-0", "descripcion": "LLAMADO ESTRUCTURAL" } },
+  { "model": "partes.tipoemergencia", "pk": 2, "fields": { "codigo": "10-1", "descripcion": "INCENDIO DE VEHICULO" } },
+  { "model": "partes.tipoemergencia", "pk": 3, "fields": { "codigo": "10-2", "descripcion": "INCENDIO DE PASTIZAL" } },
+  { "model": "partes.tipoemergencia", "pk": 4, "fields": { "codigo": "10-3", "descripcion": "RESCATE DE PERSONA ATRAPADA" } },
+  { "model": "partes.tipoemergencia", "pk": 5, "fields": { "codigo": "10-4", "descripcion": "ACCIDENTE DE TRANSITO" } },
+  { "model": "partes.tipoemergencia", "pk": 7, "fields": { "codigo": "10-6", "descripcion": "LLAMADO A EMANACION DE GASES" } },
+  { "model": "partes.tipoemergencia", "pk": 8, "fields": { "codigo": "10-7", "descripcion": "LLAMADO ELECTRICO" } },
+  { "model": "partes.tipoemergencia", "pk": 9, "fields": { "codigo": "10-8", "descripcion": "LLAMADO A REFINERIA O HIDROCARBUROS" } },
+  { "model": "partes.tipoemergencia", "pk": 10, "fields": { "codigo": "10-9", "descripcion": "LLAMADO A OTROS SERVICIOS" } },
+  { "model": "partes.tipoemergencia", "pk": 11, "fields": { "codigo": "10-10", "descripcion": "LLAMADO A ESCOMBROS (REBROTE)" } },
+  { "model": "partes.tipoemergencia", "pk": 12, "fields": { "codigo": "10-11", "descripcion": "LLAMADO A SERVICIO AEREO" } },
+  { "model": "partes.tipoemergencia", "pk": 13, "fields": { "codigo": "10-12", "descripcion": "LLAMADO A APOYO DE OTROS CUERPOS" } },
+  { "model": "partes.tipoemergencia", "pk": 14, "fields": { "codigo": "10-13", "descripcion": "LLAMADO A ARTEFACTO EXPLOSIVO" } },
+  { "model": "partes.tipoemergencia", "pk": 15, "fields": { "codigo": "10-14", "descripcion": "LLAMADO A ACCIDENTE AEREO" } },
+  { "model": "partes.tipoemergencia", "pk": 16, "fields": { "codigo": "10-15", "descripcion": "LLAMADO A MARITIMO O PORTUARIO" } },
+  { "model": "partes.tipoemergencia", "pk": 17, "fields": { "codigo": "10-16", "descripcion": "LLAMADO A EMERGENCIA PEQUEÑA" } },
+  { "model": "partes.tipoemergencia", "pk": 18, "fields": { "codigo": "10-17", "descripcion": "SERVICIO ESPECIAL" } },
+  { "model": "partes.tipoemergencia", "pk": 19, "fields": { "codigo": "10-18", "descripcion": "VERIFICACION DE EMERGENCIA" } },
+  { "model": "partes.tipoemergencia", "pk": 20, "fields": { "codigo": "10-19", "descripcion": "LLAMADO A DERRUMBE" } },
+  { "model": "partes.tipoemergencia", "pk": 21, "fields": { "codigo": "10-20", "descripcion": "INUNDACION" } },
+
+  { "model": "partes.subtipoemergencia", "pk": 1, "fields": { "tipo_padre": 1, "codigo_subtipo": "-1", "descripcion": "2DA ALARMA DE INCENDIO" } },
+  { "model": "partes.subtipoemergencia", "pk": 2, "fields": { "tipo_padre": 1, "codigo_subtipo": "-2", "descripcion": "3ERA ALARMA DE INCENDIO" } },
+  { "model": "partes.subtipoemergencia", "pk": 3, "fields": { "tipo_padre": 1, "codigo_subtipo": "-3", "descripcion": "ALARMA GENERAL" } },
+  { "model": "partes.subtipoemergencia", "pk": 4, "fields": { "tipo_padre": 1, "codigo_subtipo": "-4", "descripcion": "ALARMA GENERAL Y APOYO A OTROS CUERPOS" } },
+
+  { "model": "partes.subtipoemergencia", "pk": 5, "fields": { "tipo_padre": 3, "codigo_subtipo": "-1", "descripcion": "INCENDIO FORESTAL" } },
+  { "model": "partes.subtipoemergencia", "pk": 6, "fields": { "tipo_padre": 3, "codigo_subtipo": "-2", "descripcion": "INCENDIO DE BASURA" } },
+
+  { "model": "partes.subtipoemergencia", "pk": 7, "fields": { "tipo_padre": 5, "codigo_subtipo": "-1", "descripcion": "ATROPELLO" } },
+  { "model": "partes.subtipoemergencia", "pk": 8, "fields": { "tipo_padre": 5, "codigo_subtipo": "-2", "descripcion": "CHOQUE O COLISION" } },
+  { "model": "partes.subtipoemergencia", "pk": 9, "fields": { "tipo_padre": 5, "codigo_subtipo": "-3", "descripcion": "VOLCAMIENTO" } },
+  { "model": "partes.subtipoemergencia", "pk": 10, "fields": { "tipo_padre": 5, "codigo_subtipo": "-4", "descripcion": "ACCIDENTE FERROVIARIO" } },
+  { "model": "partes.subtipoemergencia", "pk": 11, "fields": { "tipo_padre": 5, "codigo_subtipo": "-5", "descripcion": "PERSONA CAIDA EN LA VIA PUBLICA" } }
+]
