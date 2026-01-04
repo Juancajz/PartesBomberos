@@ -11,7 +11,7 @@ class BomberoSerializer(serializers.ModelSerializer):
         # --- AGREGAMOS: email, fecha_nacimiento, fecha_ingreso ---
         fields = [
             'id', 'username', 'password', 'first_name', 'last_name','nombre_completo', 'rut', 'email', 'fecha_nacimiento', 
-            'fecha_ingreso','rango', 'rango_texto', 'compania', 'compania_texto', 'is_staff', 'is_active','telefono', 
+            'fecha_ingreso','foto','rango', 'rango_texto', 'compania', 'compania_texto', 'is_staff', 'is_active','telefono', 
             'direccion', 'contacto_emergencia_nombre', 'contacto_emergencia_telefono','grupo_sanguineo', 'alergias', 
             'enfermedades_cronicas', 'talla_polera', 'talla_pantalon', 'talla_calzado'
         ]

@@ -45,6 +45,7 @@ class Bombero(AbstractUser):
     rut = models.CharField(max_length=12, unique=True, null=True, blank=True)
     fecha_nacimiento = models.DateField(null=True, blank=True)
     fecha_ingreso = models.DateField(null=True, blank=True)
+    foto = models.ImageField(upload_to='perfiles/', null=True, blank=True, verbose_name="Foto de Perfil")
     
     rango = models.CharField(max_length=20, choices=RANGOS, default='VOLUNTARIO')
     compania = models.CharField(max_length=20, choices=COMPANIAS, default='PRIMERA')
