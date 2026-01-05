@@ -58,15 +58,13 @@ class BomberoSimpleSerializer(serializers.ModelSerializer):
         fields = ['id', 'first_name', 'last_name', 'rango', 'foto', 'compania']
 
 class GuardiaNocturnaSerializer(serializers.ModelSerializer):
-    voluntarios_detalles = BomberoSimpleSerializer(source='voluntarios', many=True, read_only=True)
-    
-    voluntarios = serializers.PrimaryKeyRelatedField(
-        queryset=Bombero.objects.all(), 
-        many=True, 
-        write_only=True,
-        required=False
-    )
+    fecha = serializers.DateField(source='fecha_inicio')
 
     class Meta:
         model = GuardiaNocturna
-        fields = ['id', 'fecha', 'compania', 'voluntarios', 'voluntarios_detalles', 'jefe_turno']
+        fields = ['id', 'fecha', 'compania_responsable', 'voluntarios', 'activa']
+        extra_kwargs = {
+            'voluntarios': {'required': False, 'allow_empty': True},
+            'compania_responsable': {'required': False},
+            'activa': {'required': False}
+        }
