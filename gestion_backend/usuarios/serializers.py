@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Bombero
+from .models import Bombero, GuardiaNocturna
 
 class BomberoSerializer(serializers.ModelSerializer):
     nombre_completo = serializers.SerializerMethodField()
@@ -8,7 +8,6 @@ class BomberoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Bombero
-        # --- AGREGAMOS: email, fecha_nacimiento, fecha_ingreso ---
         fields = [
             'id', 'username', 'password', 'first_name', 'last_name','nombre_completo', 'rut', 'email', 'fecha_nacimiento', 
             'fecha_ingreso','foto','rango', 'rango_texto', 'compania', 'compania_texto', 'is_staff', 'is_active','telefono', 
@@ -52,3 +51,22 @@ class BomberoSerializer(serializers.ModelSerializer):
         if password: instance.set_password(password)
         instance.save()
         return instance
+
+class BomberoSimpleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Bombero
+        fields = ['id', 'first_name', 'last_name', 'rango', 'foto', 'compania']
+
+class GuardiaNocturnaSerializer(serializers.ModelSerializer):
+    voluntarios_detalles = BomberoSimpleSerializer(source='voluntarios', many=True, read_only=True)
+    
+    voluntarios = serializers.PrimaryKeyRelatedField(
+        queryset=Bombero.objects.all(), 
+        many=True, 
+        write_only=True,
+        required=False
+    )
+
+    class Meta:
+        model = GuardiaNocturna
+        fields = ['id', 'fecha', 'compania', 'voluntarios', 'voluntarios_detalles', 'jefe_turno']

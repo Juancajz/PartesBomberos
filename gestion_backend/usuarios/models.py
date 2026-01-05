@@ -71,3 +71,11 @@ class Bombero(AbstractUser):
 
     def __str__(self):
         return f"{self.first_name} {self.last_name} ({self.get_rango_display()})"
+    
+class GuardiaNocturna(models.Model):
+    fecha_inicio = models.DateField(unique=True, verbose_name="Mes de Guardia")
+    compania_responsable = models.CharField(max_length=20, choices=Bombero.COMPANIAS)
+    voluntarios = models.ManyToManyField(Bombero, related_name='guardias_asignadas')
+    activa = models.BooleanField(default=True)
+    def __str__(self):
+        return f"Guardia {self.fecha_inicio.strftime('%m-%Y')} - {self.get_compania_responsable_display()}"
