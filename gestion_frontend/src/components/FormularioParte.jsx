@@ -84,6 +84,11 @@ function FormularioParte({ tipoPreseleccionado }) {
             const fHora = fechaObj.toTimeString().slice(0, 5);
 
             const tipoReal = typeof data.tipo_emergencia === 'object' ? data.tipo_emergencia?.id : data.tipo_emergencia;
+            const subtipoReal = typeof data.subtipo_emergencia === 'object' ? data.subtipo_emergencia?.id : data.subtipo_emergencia;
+
+            if (data.tipo_detalle?.codigo) {
+                setEsVehicular(data.tipo_detalle.codigo.startsWith('10-1') || data.tipo_detalle.codigo.startsWith('10-4'));
+            }
 
             setFormulario(prev => ({
                 ...prev,
@@ -93,9 +98,21 @@ function FormularioParte({ tipoPreseleccionado }) {
                 latitud: data.latitud || null,
                 longitud: data.longitud || null,
                 tipo: tipoReal || '', 
+                subtipo: subtipoReal || '',
                 descripcion: data.descripcion || '',
                 jefe_a_cargo: data.jefe_a_cargo || '',
-                quien_anoto: data.quien_anoto || ''
+                quien_anoto: data.quien_anoto || '',
+                afectado_rut: data.afectado_rut || '',
+                afectado_nombre: data.afectado_nombre || '',
+                afectado_telefono: data.afectado_telefono ? data.afectado_telefono.replace('+56', '') : '',
+                denunciante_rut: data.denunciante_rut || '',
+                denunciante_nombre: data.denunciante_nombre || '',
+                vehiculo_patente: data.vehiculo_patente || '',
+                vehiculo_marca: data.vehiculo_marca || '',
+                vehiculo_modelo: data.vehiculo_modelo || '',
+                vehiculo_color: data.vehiculo_color || '',
+                vehiculo_tipo: data.vehiculo_tipo || '',
+                hora_extincion: data.hora_extincion || '', 
             }));
 
             if (data.asistencias_carros && data.asistencias_carros.length > 0) {
@@ -113,9 +130,25 @@ function FormularioParte({ tipoPreseleccionado }) {
                 setDatosPorCarro(objCarros);
 
                 const primerCarro = data.asistencias_carros[0];
-                if (primerCarro.hora_salida_cuartel) {
-                    setFormulario(prev => ({ ...prev, hora_salida_cuartel: primerCarro.hora_salida_cuartel.slice(0,5) }));
-                }
+                setFormulario(prev => ({ 
+                    ...prev, 
+                    hora_salida_cuartel: primerCarro.hora_salida_cuartel ? primerCarro.hora_salida_cuartel.slice(0,5) : '',
+                    hora_llegada_emergencia: primerCarro.hora_llegada_emergencia ? primerCarro.hora_llegada_emergencia.slice(0,5) : '',
+                    hora_control_emergencia: primerCarro.hora_retirada_emergencia ? primerCarro.hora_retirada_emergencia.slice(0,5) : '',
+                    hora_termino_emergencia: primerCarro.hora_llegada_cuartel ? primerCarro.hora_llegada_cuartel.slice(0,5) : '',
+                }));
+            }
+
+            if (data.asistencias_bomberos && data.asistencias_bomberos.length > 0) {
+                const idsBomberos = data.asistencias_bomberos.map(b => typeof b.bombero === 'object' ? b.bombero.id : b.bombero);
+                setAsistenciaBomberos(idsBomberos);
+            }
+
+            if (data.apoyo_externo) {
+                setApoyoExterno(prev => ({
+                    ...prev,
+                    ...data.apoyo_externo
+                }));
             }
 
             axios.get('/api/subtipos-emergencia/').then(resSub => {

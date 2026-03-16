@@ -46,7 +46,7 @@ function HistorialPartes() {
   };
 
   const editarParte = (parteId) => {
-      navigate('/ingreso', { state: { parteEdicionId: parteId } });
+      navigate('/formulario', { state: { parteEdicionId: parteId } });
   };
 
   const partesFiltrados = partes.filter(parte => 
