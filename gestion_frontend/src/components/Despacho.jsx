@@ -13,7 +13,13 @@ function Despacho() {
     
     const [cargando, setCargando] = useState(true);
     const [mostrarMapa, setMostrarMapa] = useState(false);
-    const [emergenciasActivas, setEmergenciasActivas] = useState([]);
+    
+    // Recuperar del LocalStorage para que no se borre al cambiar de pestaña
+    const [emergenciasActivas, setEmergenciasActivas] = useState(() => {
+        const guardadas = localStorage.getItem('emergencias_central');
+        return guardadas ? JSON.parse(guardadas) : [];
+    });
+
     const [modoApoyo, setModoApoyo] = useState(null); 
 
     const [formulario, setFormulario] = useState({
@@ -25,27 +31,30 @@ function Despacho() {
         carros_seleccionados: []
     });
 
+    // Guardar automáticamente cada vez que cambie la lista
+    useEffect(() => {
+        localStorage.setItem('emergencias_central', JSON.stringify(emergenciasActivas));
+    }, [emergenciasActivas]);
+
     useEffect(() => {
         const cargarDatos = async () => {
             try {
                 const resTipos = await axios.get('/api/tipos-emergencia/');
                 const resCarros = await axios.get('/api/carros/');
                 const resBomberos = await axios.get('/api/bomberos/');
-                const resActivas = await axios.get('/api/emergencias-activas/');
                 
                 const dataTipos = Array.isArray(resTipos.data) ? resTipos.data : (resTipos.data.results || []);
                 const dataCarros = Array.isArray(resCarros.data) ? resCarros.data : (resCarros.data.results || []);
                 const dataBomberos = Array.isArray(resBomberos.data) ? resBomberos.data : (resBomberos.data.results || []);
-                const dataActivas = Array.isArray(resActivas.data) ? resActivas.data : (resActivas.data.results || []);
 
                 setTiposEmergencia(dataTipos);
                 setListaBomberos(dataBomberos);
-                setEmergenciasActivas(dataActivas);
                 
+                // Sincronizar estado de los carros con lo que hay en memoria
                 const carrosInicializados = dataCarros.map(c => {
-                    const emergenciaDondeEsta = dataActivas.find(em => em.carros.includes(c.id));
-                    if (emergenciaDondeEsta) {
-                        return { ...c, estado: 'DESPACHADO', emergencia_actual_id: emergenciaDondeEsta.id };
+                    const emDondeEsta = emergenciasActivas.find(em => em.carros.includes(c.id));
+                    if (emDondeEsta) {
+                        return { ...c, estado: 'DESPACHADO', emergencia_actual_id: emDondeEsta.id };
                     }
                     return { ...c, estado: 'DISPONIBLE', emergencia_actual_id: null };
                 });
@@ -53,11 +62,7 @@ function Despacho() {
 
             } catch (error) {
                 console.error("Error cargando datos:", error);
-                if (error.response?.status === 401) {
-                    Swal.fire('Sesión no encontrada', 'Al recargar la página se perdió la sesión.', 'warning');
-                } else {
-                    Swal.fire('Error', 'No se pudieron cargar los datos de la central.', 'error');
-                }
+                Swal.fire('Error', 'No se pudieron cargar los datos de la central.', 'error');
             } finally {
                 setCargando(false);
             }
@@ -99,33 +104,14 @@ function Despacho() {
         setFormulario({ tipo_emergencia: '', lugar: '', latitud: null, longitud: null, descripcion: '', carros_seleccionados: [] });
     };
 
-    const handleAsignarResponsable = async (parteId, bomberoId) => {
-        try {
-            await axios.post(`/api/partes/${parteId}/asignar-responsable/`, { bombero_id: bomberoId });
-            
-            setEmergenciasActivas(prev => prev.map(em => {
-                if (em.id === parteId) {
-                    const b = listaBomberos.find(bom => bom.id === parseInt(bomberoId));
-                    let nombreMostrar = "Asignado";
-                    if (b) {
-                        nombreMostrar = (b.first_name || b.last_name) 
-                            ? `${b.first_name || ''} ${b.last_name || ''}`.trim() 
-                            : b.username;
-                    }
-                    
-                    return { ...em, responsable_edicion_id: bomberoId, responsable_edicion_nombre: nombreMostrar };
-                }
-                return em;
-            }));
-
-            Swal.fire({
-                toast: true, position: 'top-end', icon: 'success', 
-                title: 'Responsable asignado', showConfirmButton: false, timer: 1500
-            });
-        } catch (error) {
-            console.error(error);
-            Swal.fire('Error', 'No se pudo asignar al responsable.', 'error');
-        }
+    // Nueva función para el botón X
+    const cerrarDespachoManual = (emergenciaId, carrosIds) => {
+        setEmergenciasActivas(prev => prev.filter(em => em.id !== emergenciaId));
+        setCarros(prevCarros => prevCarros.map(c => 
+            (carrosIds.includes(c.id) && c.emergencia_actual_id === emergenciaId)
+            ? { ...c, estado: 'DISPONIBLE', emergencia_actual_id: null } 
+            : c
+        ));
     };
 
     const handleDespachar = async (e) => {
@@ -158,8 +144,7 @@ function Despacho() {
                 };
 
                 const response = await axios.post('/api/despachar/', payload);
-                const dataDespacho = response.data;
-                const targetEmergenciaId = modoApoyo ? modoApoyo.id : dataDespacho.emergencia_id;
+                const targetEmergenciaId = modoApoyo ? modoApoyo.id : response.data.emergencia_id;
 
                 setCarros(prevCarros => prevCarros.map(c => 
                     formulario.carros_seleccionados.includes(c.id) 
@@ -183,12 +168,11 @@ function Despacho() {
                         latitud: formulario.latitud,
                         longitud: formulario.longitud,
                         descripcion: formulario.descripcion,
-                        hora: dataDespacho.hora_despacho || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                        carros: formulario.carros_seleccionados,
-                        responsable_edicion_id: null 
+                        hora: response.data.hora_despacho || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                        carros: formulario.carros_seleccionados
                     };
                     setEmergenciasActivas([nuevaEmergencia, ...emergenciasActivas]);
-                    Swal.fire('¡Despacho Exitoso!', 'Se ha generado el Parte en Curso.', 'success');
+                    Swal.fire('¡Despacho Exitoso!', 'Se ha generado el despacho en pantalla.', 'success');
                 }
                 
                 cancelarApoyo(); 
@@ -196,8 +180,7 @@ function Despacho() {
 
             } catch (error) {
                 console.error("Error al despachar:", error);
-                const msj = error.response?.data?.error || 'Revisa la consola del servidor.';
-                Swal.fire('Error en el Servidor', msj, 'error');
+                Swal.fire('Error', 'No se pudo procesar el despacho.', 'error');
             }
         }
     };
@@ -218,7 +201,7 @@ function Despacho() {
                             {modoApoyo && <Button variant="outline-light" size="sm" onClick={cancelarApoyo}><FaTimes /> Cancelar</Button>}
                         </Card.Header>
                         <Card.Body className="bg-light">
-                            {modoApoyo && <div className="alert alert-primary p-2 small fw-bold">🚨 Bloqueado: Los carros se sumarán al parte existente.</div>}
+                            {modoApoyo && <div className="alert alert-primary p-2 small fw-bold">🚨 Bloqueado: Los carros se sumarán al despacho existente.</div>}
                             <Form onSubmit={handleDespachar}>
                                 <Form.Group className="mb-3">
                                     <Form.Label className="fw-bold text-secondary"><FaExclamationTriangle className="me-2"/>Código (*)</Form.Label>
@@ -306,7 +289,12 @@ function Despacho() {
                                     <Card key={em.id} className="mb-3 border-danger shadow-sm">
                                         <Card.Header className="bg-danger text-white py-1 px-2 d-flex justify-content-between align-items-center">
                                             <span className="fw-bold">{em.codigo_texto}</span>
-                                            <span className="badge bg-dark">{em.hora}</span>
+                                            <div className="d-flex align-items-center gap-2">
+                                                <span className="badge bg-dark">{em.hora}</span>
+                                                <Button variant="link" className="text-white p-0" onClick={() => cerrarDespachoManual(em.id, em.carros)}>
+                                                    <FaTimes />
+                                                </Button>
+                                            </div>
                                         </Card.Header>
                                         <Card.Body className="p-2">
                                             <div className="small fw-bold mb-1 text-truncate" title={em.lugar}>
@@ -320,34 +308,16 @@ function Despacho() {
                                                     if (!carro) return null;
                                                     const sigueAqui = carro.emergencia_actual_id === em.id;
                                                     return (
-                                                        <Badge key={cId} bg={sigueAqui ? "danger" : "info"} style={!sigueAqui ? { opacity: 0.7, textDecoration: 'line-through' } : {}} title={!sigueAqui ? "Reasignado a otra emergencia" : "Trabajando en el lugar"}>
+                                                        <Badge 
+                                                            key={cId} 
+                                                            bg={sigueAqui ? "danger" : "info"} 
+                                                            style={!sigueAqui ? { opacity: 0.7, textDecoration: 'line-through' } : {}}
+                                                            title={!sigueAqui ? "Reasignado a otra emergencia" : "Trabajando en el lugar"}
+                                                        >
                                                             {carro.nombre}
                                                         </Badge>
                                                     );
                                                 })}
-                                            </div>
-
-                                            <div className="mt-2 border-top pt-2">
-                                                <Form.Label className="small fw-bold text-secondary mb-1">
-                                                    <FaUserEdit className="me-1"/> Responsable de Parte:
-                                                </Form.Label>
-                                                <Form.Select 
-                                                    size="sm" 
-                                                    value={em.responsable_edicion_id || ''} 
-                                                    onChange={(e) => handleAsignarResponsable(em.id, e.target.value)}
-                                                    className="bg-light"
-                                                    style={{fontSize: '0.8rem'}}
-                                                >
-                                                    <option value="">-- Asignar Voluntario --</option>
-                                                    {listaBomberos.map(b => {
-                                                        const nombreOpcion = (b.first_name || b.last_name) 
-                                                            ? `${b.first_name || ''} ${b.last_name || ''}`.trim() 
-                                                            : `(Sin Nombre) RUT: ${b.username}`;
-                                                        return (
-                                                            <option key={b.id} value={b.id}>{nombreOpcion}</option>
-                                                        )
-                                                    })}
-                                                </Form.Select>
                                             </div>
 
                                             <div className="d-grid mt-2">

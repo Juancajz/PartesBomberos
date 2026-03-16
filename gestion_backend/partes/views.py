@@ -89,78 +89,27 @@ def dashboard_inicio(request):
 
 @api_view(['POST'])
 def despachar_emergencia(request):
-    """Crea un Parte en estado BORRADOR o asigna Apoyo a uno existente"""
     try:
         data = request.data
         tipo_id = data.get('tipo_emergencia')
         lugar = data.get('lugar')
-        descripcion = data.get('descripcion', 'Sin detalle')
         carros_ids = data.get('carros_seleccionados', [])
-        lat = data.get('latitud')
-        lng = data.get('longitud')
         
-        # EL DATO CLAVE PARA EL APOYO
-        emergencia_padre_id = data.get('emergencia_padre_id')
-
-        hora_actual = datetime.datetime.now().time()
-
-        # --- LÓGICA DE APOYO ---
-        if emergencia_padre_id:
-            parte_existente = Parte.objects.get(id=emergencia_padre_id)
-            
-            for carro_id in carros_ids:
-                # Evitamos duplicar si la Central presiona 2 veces por error
-                if not AsistenciaCarro.objects.filter(parte=parte_existente, carro_id=carro_id).exists():
-                    AsistenciaCarro.objects.create(
-                        parte=parte_existente,
-                        carro_id=carro_id,
-                        hora_salida_cuartel=hora_actual
-                    )
-                    
-            return Response({
-                "mensaje": "Apoyo asignado exitosamente al Parte",
-                "emergencia_id": parte_existente.id,
-                "hora_despacho": hora_actual.strftime("%H:%M")
-            }, status=200)
-
-        # --- LÓGICA DE DESPACHO NUEVO ---
+        # Validamos que el tipo existe para no enviar basura
         tipo = TipoEmergencia.objects.get(id=tipo_id)
-        carros_objs = Carro.objects.filter(id__in=carros_ids)
-        nombres_carros = " - ".join([c.nombre for c in carros_objs])
-
-        print("\n--- ALERTA GENERADA ---")
-        print(f"DESPACHO: {tipo.codigo} - {tipo.descripcion}")
-        print(f"Lugar: {lugar}")
-        print(f"Unidades: {nombres_carros}")
-        print("-----------------------\n")
-
-        nuevo_parte = Parte.objects.create(
-            tipo_emergencia=tipo,
-            lugar=lugar,
-            descripcion=descripcion,
-            latitud=lat,
-            longitud=lng,
-            estado='BORRADOR', 
-            fecha_hora_emergencia=timezone.now()
-        )
-
-        for carro_id in carros_ids:
-            AsistenciaCarro.objects.create(
-                parte=nuevo_parte,
-                carro_id=carro_id,
-                hora_salida_cuartel=hora_actual
-            )
+        
+        # Generamos un ID único temporal para el frontend
+        import time
+        emergencia_id = int(time.time()) 
 
         return Response({
-            "mensaje": "Despacho creado exitosamente",
-            "emergencia_id": nuevo_parte.id,
-            "hora_despacho": hora_actual.strftime("%H:%M")
-        }, status=201)
-
+            "mensaje": "Despacho procesado",
+            "emergencia_id": emergencia_id,
+            "hora_despacho": datetime.datetime.now().strftime("%H:%M"),
+            "codigo_texto": tipo.codigo
+        }, status=200)
     except Exception as e:
-        print(f"Error en despacho: {e}")
         return Response({"error": str(e)}, status=500)
-
 
 @api_view(['GET'])
 def obtener_emergencias_activas(request):
@@ -191,22 +140,3 @@ def obtener_emergencias_activas(request):
         print(f"Error al obtener emergencias activas: {e}")
         return Response({"error": str(e)}, status=500)
 
-
-@api_view(['POST'])
-def asignar_responsable_parte(request, parte_id):
-    """Permite a la Central designar qué voluntario debe llenar el Parte"""
-    try:
-        parte = Parte.objects.get(id=parte_id)
-        bombero_id = request.data.get('bombero_id')
-        
-        if bombero_id:
-            parte.responsable_edicion_id = bombero_id
-            parte.save()
-            return Response({"mensaje": "Responsable asignado exitosamente"}, status=200)
-        else:
-            return Response({"error": "No se envió el ID del bombero"}, status=400)
-            
-    except Parte.DoesNotExist:
-        return Response({"error": "El parte no existe"}, status=404)
-    except Exception as e:
-        return Response({"error": str(e)}, status=500)

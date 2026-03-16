@@ -47,10 +47,7 @@ urlpatterns = [
     
     # --- RUTAS DE LA CENTRAL DE ALARMAS Y DESPACHO ---
     path('api/despachar/', partes_views.despachar_emergencia, name='despachar-emergencia'),
-    path('api/emergencias-activas/', partes_views.obtener_emergencias_activas, name='emergencias-activas'),
-    path('api/partes/<int:parte_id>/asignar-responsable/', partes_views.asignar_responsable_parte, name='asignar-responsable'),
-]
-
+    path('api/emergencias-activas/', partes_views.obtener_emergencias_activas, name='emergencias-activas'),]
 # Configuración para servir archivos multimedia en modo desarrollo
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
